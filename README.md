@@ -30,7 +30,7 @@ A complete full-stack application for tracking student attendance using QR codes
 - **Axios** - HTTP client
 
 ### Deployment
-- **Backend**: Render (cloud hosting)
+- **Backend**: Railway (cloud hosting)
 - **Frontend**: Vercel (static hosting)
 - **Database**: Supabase (PostgreSQL)
 
@@ -96,7 +96,7 @@ CREATE TABLE sessions (
 );
 
 -- Create attendance table
-CREATE TABLE attendance (
+CREATE TABLE attendance_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id UUID REFERENCES users(id),
     session_code TEXT NOT NULL,
@@ -106,12 +106,12 @@ CREATE TABLE attendance (
 -- Enable Row Level Security
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance_records ENABLE ROW LEVEL SECURITY;
 
 -- Create policies (allow all operations)
 CREATE POLICY "Enable all for users" ON users FOR ALL USING (true);
 CREATE POLICY "Enable all for sessions" ON sessions FOR ALL USING (true);
-CREATE POLICY "Enable all for attendance" ON attendance FOR ALL USING (true);
+CREATE POLICY "Enable all for attendance" ON attendance_records FOR ALL USING (true);
 ```
 
 ### 3. Setup Backend
@@ -159,22 +159,17 @@ VITE_API_URL=http://localhost:5000/api
 
 ## ☁️ Deployment
 
-### Deploy Backend to Render
+### Deploy Backend to Railway
 
 1. Push your code to GitHub
-2. Go to [Render Dashboard](https://dashboard.render.com)
-3. Click "New Web Service"
-4. Connect your GitHub repository
-5. Configure:
-   - **Name**: `tapandtrack-backend`
-   - **Environment**: `.NET`
-   - **Build Command**: `dotnet publish -c Release -o out`
-   - **Start Command**: `dotnet out/TapAndTrack.dll`
-6. Add environment variables:
+2. Go to Railway Dashboard
+3. Click "New Project" -> "Deploy from GitHub repo"
+4. Select your repository.
+5. In the new service, go to Settings -> Build and set the **Root Directory** to `backend`.
+6. In the service's "Variables" tab, add:
    - `Supabase__Url`
    - `Supabase__Key` (Use the **service_role** key here)
-   - `ASPNETCORE_URLS=http://+:10000`
-7. Click "Create Web Service"
+7. Get the public URL from the "Settings" tab under "Networking".
 
 ### Deploy Frontend to Vercel
 
@@ -186,7 +181,7 @@ VITE_API_URL=http://localhost:5000/api
    - **Framework Preset**: `Vite`
    - **Root Directory**: `frontend`
 6. Add environment variable:
-   - `VITE_API_URL` = `https://YOUR-RENDER-BACKEND.onrender.com/api`
+   - `VITE_API_URL` = `https://YOUR-RAILWAY-BACKEND-URL/api`
 7. Click "Deploy"
 
 ## 📱 Usage

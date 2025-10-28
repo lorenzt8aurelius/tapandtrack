@@ -6,7 +6,7 @@ Complete guide for deploying TapAndTrack to production.
 
 - GitHub account
 - Supabase account and project
-- Render account (for backend)
+- Railway account (for backend)
 - Vercel account (for frontend)
 
 ## Step 1: Setup Supabase Database
@@ -39,23 +39,20 @@ CREATE TABLE sessions (
     is_active BOOLEAN DEFAULT TRUE
 );
 
--- Create attendance table
-CREATE TABLE attendance (
+CREATE TABLE attendance_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id UUID REFERENCES users(id),
     session_code TEXT NOT NULL,
     time_in TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Enable Row Level Security
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance_records ENABLE ROW LEVEL SECURITY;
 
--- Create policies (allow all operations)
 CREATE POLICY "Enable all for users" ON users FOR ALL USING (true);
 CREATE POLICY "Enable all for sessions" ON sessions FOR ALL USING (true);
-CREATE POLICY "Enable all for attendance" ON attendance FOR ALL USING (true);
+CREATE POLICY "Enable all for attendance" ON attendance_records FOR ALL USING (true);
 ```
 
 6. Navigate to **Settings** > **API**
