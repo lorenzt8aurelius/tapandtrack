@@ -55,7 +55,7 @@ CREATE TABLE sessions (
 );
 
 -- Create attendance table
-CREATE TABLE attendance_records (
+CREATE TABLE attendance (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id UUID REFERENCES users(id),
     session_code TEXT NOT NULL,
@@ -65,12 +65,12 @@ CREATE TABLE attendance_records (
 -- Enable Row Level Security (RLS) if needed
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE attendance_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
 
 -- Create policies to allow all operations (adjust based on your security needs)
 CREATE POLICY "Enable all for users" ON users FOR ALL USING (true);
 CREATE POLICY "Enable all for sessions" ON sessions FOR ALL USING (true);
-CREATE POLICY "Enable all for attendance" ON attendance_records FOR ALL USING (true);
+CREATE POLICY "Enable all for attendance" ON attendance FOR ALL USING (true);
 ```
 
 ### 3. Install Dependencies

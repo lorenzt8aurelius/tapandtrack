@@ -79,9 +79,9 @@ CREATE POLICY "Enable all for attendance" ON attendance FOR ALL USING (true);
 1. Go to **Settings** > **API**
 2. Copy the following values:
    - **Project URL**: `https://xxxxx.supabase.co`
-   - **anon public key**: Long alphanumeric string
+   - **`service_role` secret key**: Long alphanumeric string (This is required for the backend)
 
-Keep these values - you'll need them in the next steps.
+Keep both the Project URL and the `service_role` key for the next steps.
 
 ## Part 2: Setup Backend
 
@@ -100,8 +100,8 @@ Create a `.env` file in the `backend` directory (or set system environment varia
 
 **On Windows (PowerShell):**
 ```powershell
-$env:Supabase__Url="https://YOURPROJECT.supabase.co"
-$env:Supabase__AnonKey="YOUR_SUPABASE_ANON_KEY"
+$env:Supabase__Url="YOUR_SUPABASE_PROJECT_URL"
+$env:Supabase__Key="YOUR_SUPABASE_SERVICE_ROLE_KEY"
 ```
 
 **On Linux/Mac:**

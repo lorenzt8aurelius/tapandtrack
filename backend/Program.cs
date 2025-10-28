@@ -4,7 +4,7 @@ using TapAndTrack.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 var supabaseUrl = builder.Configuration["Supabase:Url"] ?? Environment.GetEnvironmentVariable("Supabase__Url") ?? "";
-var supabaseKey = builder.Configuration["Supabase:Key"] ?? Environment.GetEnvironmentVariable("Supabase__Key") ?? builder.Configuration["Supabase:AnonKey"] ?? Environment.GetEnvironmentVariable("Supabase__AnonKey") ?? "";
+var supabaseKey = builder.Configuration["Supabase:Key"] ?? Environment.GetEnvironmentVariable("Supabase__Key") ?? "";
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -18,8 +18,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
                 "http://localhost:5173",
                 "http://localhost:3000",
-                "https://tapandtrack.vercel.app",
-                "https://tapandtrack-frontend.vercel.app"
+                "https://tapandtrack.vercel.app", // Example URL
+                "https://tapandtrackapp.vercel.app" // Your actual production URL
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
