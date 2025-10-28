@@ -131,9 +131,9 @@ Swagger UI: `http://localhost:5000/swagger`
 
 **Environment Variables:**
 Create a `.env` file or set these in your system:
-```env
+```
 Supabase__Url=https://YOURPROJECT.supabase.co
-Supabase__AnonKey=YOUR_SUPABASE_ANON_KEY
+Supabase__Key=YOUR_SUPABASE_SERVICE_ROLE_KEY
 ASPNETCORE_URLS=http://+:5000
 ```
 

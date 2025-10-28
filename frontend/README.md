@@ -35,7 +35,7 @@ VITE_API_URL=http://localhost:5000/api
 
 For production:
 ```env
-VITE_API_URL=https://tapandtrack-backend.onrender.com/api
+VITE_API_URL=https://YOUR-RAILWAY-BACKEND-URL/api
 ```
 
 ### 3. Run Development Server
@@ -114,7 +114,7 @@ The frontend communicates with the backend API through the `api.js` module:
 2. Go to [Vercel](https://vercel.com)
 3. Import your repository
 4. Configure environment variables:
-   - `VITE_API_URL=https://YOUR-RENDER-BACKEND.onrender.com/api`
+   - `VITE_API_URL=https://YOUR-RAILWAY-BACKEND-URL/api`
 5. Deploy
 
 ### Option 2: Vercel CLI
