@@ -85,14 +85,14 @@ git push -u origin main
    - **Region**: `Oregon` (or your preferred region)
    - **Branch**: `main`
    - **Root Directory**: `backend`
-   - **Environment**: `Docker`
+   - **Environment**: `.NET`
    - **Plan**: `Starter` (or `Free` for testing)
 
    **Build & Deploy:**
    - **Build Command**: `dotnet publish -c Release -o out`
    - **Start Command**: `dotnet out/TapAndTrack.dll`
 
-6. Click **"Advanced"** and add environment variables:
+6. Click **"Advanced"** and add **Environment Variables**:
 
 ```
 Supabase__Url=https://YOURPROJECT.supabase.co
@@ -162,8 +162,8 @@ Update the allowed origins as needed.
 ### Backend (Render)
 ```env
 Supabase__Url=https://YOURPROJECT.supabase.co
-Supabase__AnonKey=YOUR_SUPABASE_ANON_KEY
-ASPNETCORE_URLS=http://+:5000
+Supabase__Key=YOUR_SUPABASE_SERVICE_ROLE_KEY
+ASPNETCORE_URLS=http://+:10000
 ```
 
 ### Frontend (Vercel)

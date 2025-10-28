@@ -24,7 +24,7 @@ Create a `.env` file or set environment variables:
 
 ```env
 Supabase__Url=https://YOURPROJECT.supabase.co
-Supabase__AnonKey=YOUR_SUPABASE_ANON_KEY
+Supabase__Key=YOUR_SUPABASE_SERVICE_ROLE_KEY
 ASPNETCORE_URLS=http://+:5000
 ```
 

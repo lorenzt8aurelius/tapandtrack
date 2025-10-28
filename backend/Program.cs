@@ -4,7 +4,7 @@ using TapAndTrack.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 var supabaseUrl = builder.Configuration["Supabase:Url"] ?? Environment.GetEnvironmentVariable("Supabase__Url") ?? "";
-var supabaseKey = builder.Configuration["Supabase:AnonKey"] ?? Environment.GetEnvironmentVariable("Supabase__AnonKey") ?? "";
+var supabaseKey = builder.Configuration["Supabase:Key"] ?? Environment.GetEnvironmentVariable("Supabase__Key") ?? "";
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

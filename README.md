@@ -167,13 +167,13 @@ VITE_API_URL=http://localhost:5000/api
 4. Connect your GitHub repository
 5. Configure:
    - **Name**: `tapandtrack-backend`
-   - **Environment**: `Docker`
+   - **Environment**: `.NET`
    - **Build Command**: `dotnet publish -c Release -o out`
    - **Start Command**: `dotnet out/TapAndTrack.dll`
 6. Add environment variables:
    - `Supabase__Url`
-   - `Supabase__AnonKey`
-   - `ASPNETCORE_URLS=http://+:5000`
+   - `Supabase__Key` (Use the **service_role** key here)
+   - `ASPNETCORE_URLS=http://+:10000`
 7. Click "Create Web Service"
 
 ### Deploy Frontend to Vercel
