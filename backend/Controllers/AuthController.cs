@@ -69,9 +69,11 @@ namespace TapAndTrack.Controllers
                 var response = await _supabase.From<User>()
                     .Select("*")
                     .Filter("email", Operator.Equals, request.Email)
-                    .Single();
+                    .Get();
 
-                if (response == null || !BCrypt.Net.BCrypt.Verify(request.Password, response.Password))
+                var user = response.Models.FirstOrDefault();
+
+                if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
                 {
                     return Unauthorized(new { message = "Invalid email or password" });
                 }
@@ -79,19 +81,19 @@ namespace TapAndTrack.Controllers
                 return Ok(new
                 {
                     message = "Login successful",
-                    user = new 
-                    { 
-                        id = response.Id, 
-                        email = response.Email, 
-                        role = response.Role,
-                        department = response.Department,
-                        yearLevel = response.YearLevel
+                    user = new
+                    {
+                        id = user.Id, 
+                        email = user.Email, 
+                        role = user.Role,
+                        department = user.Department,
+                        yearLevel = user.YearLevel
                     }
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Login failed", error = ex.Message });
+                return StatusCode(500, new { message = "An unexpected error occurred during login.", error = ex.Message });
             }
         }
     }

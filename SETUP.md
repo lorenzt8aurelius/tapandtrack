@@ -77,9 +77,9 @@ CREATE POLICY "Enable all for attendance" ON attendance FOR ALL USING (true);
 ### 1.3 Get API Credentials
 
 1. Go to **Settings** > **API**
-2. Copy the following values:
-   - **Project URL**: `https://xxxxx.supabase.co`
-   - **`service_role` secret key**: Long alphanumeric string (This is required for the backend)
+2. In the "Project API Keys" section, copy these two values. You will need them for the backend setup:
+   - **Project URL**
+   - **`service_role` secret key** (Click "Show" to reveal it)
 
 Keep both the Project URL and the `service_role` key for the next steps.
 
@@ -96,7 +96,7 @@ dotnet restore
 
 ### 2.2 Configure Environment Variables
 
-Create a `.env` file in the `backend` directory (or set system environment variables):
+To connect to your database, the backend needs your Supabase URL and **`service_role` key**. Set them as environment variables.
 
 **On Windows (PowerShell):**
 ```powershell
@@ -106,8 +106,9 @@ $env:Supabase__Key="YOUR_SUPABASE_SERVICE_ROLE_KEY"
 
 **On Linux/Mac:**
 ```bash
-export Supabase__Url="https://YOURPROJECT.supabase.co"
-export Supabase__AnonKey="YOUR_SUPABASE_ANON_KEY"
+export Supabase__Url="https://ggemseirsbpuwookpqsi.supabase.co"
+export Supabase__AnonKey="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnZW1zZWlyc2JwdXdvb2twcXNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NjY2MDIsImV4cCI6MjA3NzE0MjYwMn0.GgW9nZxNn6WTLTC7GK5cNwFTNad9TjifrNzUNU3quEc
+"
 ```
 
 Or edit `backend/appsettings.json`:
