@@ -32,26 +32,17 @@
 
 ## 🏗️ Technical Architecture
 
-### Backend (.NET 8)
-**Location**: `/backend`
+### Backend (Supabase)
+**Location**: `/supabase/functions`
 
 **Key Components:**
-- **Controllers**: Handle HTTP requests
-  - `AuthController` - User authentication
-  - `SessionsController` - Session management and QR generation
-  - `AttendanceController` - Attendance recording and retrieval
-
-- **Models**: Data structures
-  - `User` - User information
-  - `Session` - Attendance sessions
-  - `AttendanceRecord` - Attendance data
+- **Edge Functions**: Deno/TypeScript functions for handling business logic.
+  - `register`, `login`, `create-session`, etc.
 
 **Technologies:**
-- ASP.NET Core Web API
-- Supabase Client
-- QRCoder (QR code generation)
-- BCrypt (password hashing)
-- Swashbuckle (Swagger UI)
+- Supabase Edge Functions
+- Deno Runtime
+- TypeScript
 
 ### Frontend (React + Vite)
 **Location**: `/frontend`
@@ -65,7 +56,7 @@
 
 - **Core Files**:
   - `App.jsx` - Routing and state management
-  - `api.js` - API client configuration
+  - `supabaseClient.js` - Supabase client configuration
   - `main.jsx` - Application entry point
 
 **Technologies:**
@@ -73,9 +64,7 @@
 - Vite (build tool)
 - React Router (navigation)
 - HTML5 QR Code Scanner
-- QRCode.react (QR display)
-- Axios (HTTP client)
-- TailwindCSS (styling)
+- @supabase/supabase-js
 - React Toastify (notifications)
 
 ### Database (Supabase/PostgreSQL)
@@ -86,26 +75,13 @@
 
 ## 🔌 API Endpoints
 
-### Authentication
-```
-POST /api/Auth/register
-POST /api/Auth/login
-```
+Your API endpoints are now Supabase Edge Functions, invoked via the Supabase client.
 
-### Sessions
-```
-POST /api/Sessions/create
-GET /api/Sessions/list?teacherId={id}
-GET /api/Sessions/active
-GET /api/Sessions/qr/{sessionCode}
-POST /api/Sessions/end/{sessionCode}
-```
-
-### Attendance
-```
-POST /api/Attendance/record
-GET /api/Attendance/session/{sessionCode}
-GET /api/Attendance/student/{studentId}
+```javascript
+// Example invocation from frontend
+const { data, error } = await supabase.functions.invoke('login', {
+  body: { email, password },
+})
 ```
 
 ## 📁 File Structure

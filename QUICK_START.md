@@ -1,14 +1,8 @@
 # TapAndTrack - Quick Start Guide
 
 Get up and running in 5 minutes!
-
-## Prerequisites Check
-
+## 1. Prerequisites Check
 ```bash
-# Check .NET 8
-dotnet --version
-# Should show: 8.x.x
-
 # Check Node.js
 node --version
 # Should show: 18.x.x or higher
@@ -19,9 +13,11 @@ npm --version
 
 If any are missing, see [SETUP.md](./SETUP.md) for installation links.
 
+You will also need the Supabase CLI.
+
 ## 5-Minute Setup
 
-### 1️⃣ Setup Supabase (2 minutes)
+### ✅ Step 1: Setup Supabase DB (2 minutes)
 
 Go to [supabase.com](https://supabase.com) → Create Project → Run this SQL:
 
@@ -62,34 +58,31 @@ CREATE POLICY "Enable all for attendance" ON attendance FOR ALL USING (true);
 
 Copy **Project URL** and **anon key** from Settings → API.
 
-### 2️⃣ Setup Backend (1 minute)
+### ✅ Step 2: Setup Supabase Locally (1 minute)
 
 ```bash
-cd backend
+# Link your local repository to your Supabase project
+supabase link --project-ref YOUR_PROJECT_ID
 
-# Windows (PowerShell)
-$env:Supabase__Url="YOUR_SUPABASE_URL"
-$env:Supabase__AnonKey="YOUR_ANON_KEY"
-
-# Or edit appsettings.json directly
-# Then run:
-dotnet run
+# Start the local Supabase stack
+supabase start
 ```
 
-Backend runs on: `http://localhost:5000`
-Swagger: `http://localhost:5000/swagger` ✅
+This will provide you with local Supabase credentials.
 
-### 3️⃣ Setup Frontend (1 minute)
+### ✅ Step 3: Setup Frontend (1 minute)
 
-```bash
-cd frontend
-
-# Create .env file (or set environment variable)
-echo "VITE_API_URL=http://localhost:5000/api" > .env
-
-npm install
-npm run dev
-```
+1.  Navigate to the frontend directory: `cd frontend`
+2.  Create a `.env` file and add your **local** Supabase credentials from the `supabase start` output:
+    ```env
+    VITE_SUPABASE_URL="https://ggemseirsbpuwookpqsi.supabase.co"
+    VITE_SUPABASE_ANON_KEY="YOUR_ANON_KEY_HERE"
+    ```
+3.  Install dependencies and run the server:
+    ```bash
+    npm install
+    npm run dev
+    ```
 
 Frontend runs on: `http://localhost:5173` ✅
 
@@ -110,39 +103,13 @@ Frontend runs on: `http://localhost:5173` ✅
 
 ## Troubleshooting
 
-### Backend won't start
-```bash
-# Check if port 5000 is in use
-cd backend
-dotnet run
-# Or change port in Program.cs: ASPNETCORE_URLS
-```
-
-### Frontend build fails
-```bash
-cd frontend
-rm -rf node_modules package-lock.json
-npm install
-```
-
-### Can't connect to Supabase
-- Check URL and key are correct
-- Verify Supabase project is active
-- Check tables exist in Table Editor
-
-### Camera not working
-- Grant browser permissions
-- Use HTTPS in production
-- Test on mobile device
-
 ## Common Commands
 
-### Backend
+### Supabase CLI
 ```bash
-cd backend
-dotnet run              # Run
-dotnet build            # Build
-dotnet test             # Test (if tests exist)
+supabase start          # Start local Supabase
+supabase stop           # Stop local Supabase
+supabase functions deploy <function-name> # Deploy a function
 ```
 
 ### Frontend
@@ -150,7 +117,6 @@ dotnet test             # Test (if tests exist)
 cd frontend
 npm run dev             # Development server
 npm run build           # Production build
-npm run preview         # Preview production build
 ```
 
 ## Environment Variables Reference

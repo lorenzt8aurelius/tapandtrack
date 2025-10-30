@@ -19,7 +19,6 @@ A React-based frontend for the TapAndTrack QR attendance tracking system.
 ## Setup
 
 ### 1. Install Dependencies
-
 ```bash
 cd frontend
 npm install

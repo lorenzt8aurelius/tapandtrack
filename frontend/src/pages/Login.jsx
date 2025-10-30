@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { authAPI } from '../api';
 import Logo from '../components/Logo';
+import { supabase } from '../supabaseClient';
 
 function Login({ updateUser }) {
   const [email, setEmail] = useState('');
@@ -16,12 +16,38 @@ function Login({ updateUser }) {
     setLoading(true);
 
     try {
-      const response = await authAPI.login({ email, password });
+      // Use Supabase's built-in authentication instead of edge function
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // Get user profile from the users table
+      const { data: userProfile, error: profileError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+      }
+
       toast.success('Login successful!');
-      updateUser(response.user);
+      
+      // Update user with combined auth and profile data
+      updateUser({
+        ...data.user,
+        ...userProfile
+      });
+      
       navigate('/dashboard');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Login failed. Please check your credentials.');
+      toast.error(error.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }

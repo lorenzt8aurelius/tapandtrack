@@ -83,55 +83,52 @@ CREATE POLICY "Enable all for attendance" ON attendance FOR ALL USING (true);
 
 Keep both the Project URL and the `service_role` key for the next steps.
 
-## Part 2: Setup Backend
+## Part 2: Setup Backend (Supabase Functions)
 
-### 2.1 Install Dependencies
+### 2.1 Install Supabase CLI
 
-```bash
-cd backend
+The Supabase CLI is required for local development and deploying functions. The recommended way to install it on Windows is with the Scoop package manager.
 
-# Restore NuGet packages
-dotnet restore
-```
+1.  **Install Scoop (if you don't have it):**
+    Open PowerShell and run:
+    ```powershell
+    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+    irm get.scoop.sh | iex
+    ```
 
-### 2.2 Configure Environment Variables
+2.  **Install Supabase CLI:**
+    In a new PowerShell window, run:
+    ```powershell
+    scoop install supabase
+    ```
 
-To connect to your database, the backend needs your Supabase URL and **`service_role` key**. Set them as environment variables.
+3.  **Verify Installation:**
+    `supabase --version`
 
-**On Windows (PowerShell):**
-```powershell
-$env:Supabase__Url="YOUR_SUPABASE_PROJECT_URL"
-$env:Supabase__Key="YOUR_SUPABASE_SERVICE_ROLE_KEY"
-```
+### 2.2 Initialize Supabase Project
 
-**On Linux/Mac:**
-```bash
-export Supabase__Url="https://ggemseirsbpuwookpqsi.supabase.co"
-export Supabase__AnonKey="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnZW1zZWlyc2JwdXdvb2twcXNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NjY2MDIsImV4cCI6MjA3NzE0MjYwMn0.GgW9nZxNn6WTLTC7GK5cNwFTNad9TjifrNzUNU3quEc
-"
-```
+1.  Login to the Supabase CLI:
+    ```bash
+    supabase login
+    ```
+2.  In your project's root directory, link your local repository to your remote Supabase project. You can get the `[project-id]` from your project's dashboard URL (`https://app.supabase.com/project/[project-id]`).
+    ```bash
+    supabase link --project-ref [project-id]
+    ```
+3.  Pull down any existing schema changes (if you ran the SQL in the dashboard):
+    ```bash
+    supabase db pull
+    ```
 
-Or edit `backend/appsettings.json`:
-
-```json
-{
-  "Supabase": {
-    "Url": "https://YOURPROJECT.supabase.co",
-    "AnonKey": "YOUR_SUPABASE_ANON_KEY"
-  }
-}
-```
-
-### 2.3 Run Backend
+### 2.3 Run Local Development Server
 
 ```bash
-cd backend
-dotnet run
+supabase start
 ```
 
-The backend should start on `http://localhost:5000`
+This command spins up the entire Supabase stack locally in Docker. It will output local API URLs and keys for you to use in your frontend.
 
-Test it by visiting: `http://localhost:5000/swagger`
+You can view the local Supabase Studio at `http://localhost:54323`.
 
 ## Part 3: Setup Frontend
 
@@ -146,10 +143,11 @@ npm install
 
 ### 3.2 Configure Environment Variables
 
-Create a `.env` file in the `frontend` directory:
+Create a `.env` file in the `frontend` directory (if you haven't already) and add your **local** Supabase credentials from the `supabase start` command:
 
 ```env
-VITE_API_URL=http://localhost:5000/api
+VITE_SUPABASE_URL="http://127.0.0.1:54321"
+VITE_SUPABASE_ANON_KEY="YOUR_LOCAL_ANON_KEY"
 ```
 
 ### 3.3 Run Frontend
@@ -279,18 +277,11 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
 
 ```
 TapAndTrack/
-├── backend/                 # .NET 8 Web API
-│   ├── Controllers/        # API endpoints
-│   │   ├── AuthController.cs
-│   │   ├── SessionsController.cs
-│   │   └── AttendanceController.cs
-│   ├── Models/             # Data models
-│   │   ├── User.cs
-│   │   ├── Session.cs
-│   │   └── AttendanceRecord.cs
-│   ├── Program.cs          # App configuration
-│   └── TapAndTrack.csproj  # Project file
-│
+├── supabase/                # Supabase project
+│   ├── functions/           # Edge Functions
+│   │   └── ...
+│   ├── migrations/          # Database migrations
+│   └── config.toml          # Project config
 ├── frontend/               # React application
 │   ├── src/
 │   │   ├── pages/
@@ -299,7 +290,7 @@ TapAndTrack/
 │   │   │   ├── Dashboard.jsx
 │   │   │   └── Scanner.jsx
 │   │   ├── App.jsx         # Main app
-│   │   ├── api.js          # API client
+│   │   ├── supabaseClient.js # Supabase client
 │   │   └── main.jsx        # Entry point
 │   ├── package.json
 │   └── vite.config.js

@@ -6,7 +6,6 @@ Complete guide for deploying TapAndTrack to production.
 
 - GitHub account
 - Supabase account and project
-- Railway account (for backend)
 - Vercel account (for frontend)
 
 ## Step 1: Setup Supabase Database
@@ -59,47 +58,19 @@ CREATE POLICY "Enable all for attendance" ON attendance FOR ALL USING (true);
 7. Copy your **Project URL** and **anon public key**
 
 ## Step 2: Push Code to GitHub
+This guide assumes you have already pushed your code to a GitHub repository.
 
-```bash
-git init
-git add .
-git commit -m "Initial commit: TapAndTrack project"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/TapAndTrack.git
-git push -u origin main
-```
+## Step 3: Deploy Backend Functions to Supabase
 
-## Step 3: Deploy Backend to Render
-
-1. Go to [Render Dashboard](https://dashboard.render.com)
-2. Click **"New"** > **"Web Service"**
-3. Connect your GitHub account if not already connected
-4. Select **TapAndTrack** repository
-5. Configure the service:
-
-   **Settings:**
-   - **Name**: `tapandtrack-backend`
-   - **Region**: `Oregon` (or your preferred region)
-   - **Branch**: `main`
-   - **Root Directory**: `backend`
-   - **Environment**: `.NET`
-   - **Plan**: `Starter` (or `Free` for testing)
-
-   **Build & Deploy:**
-   - **Build Command**: `dotnet publish -c Release -o out`
-   - **Start Command**: `dotnet out/TapAndTrack.dll`
-
-6. Click **"Advanced"** and add **Environment Variables**:
-
-```
-Supabase__Url=https://YOURPROJECT.supabase.co
-Supabase__AnonKey=YOUR_SUPABASE_ANON_KEY
-ASPNETCORE_URLS=http://+:5000
-```
-
-7. Click **"Create Web Service"**
-8. Wait for the build to complete
-9. Copy the service URL (e.g., `https://tapandtrack-backend.onrender.com`)
+1.  Install the Supabase CLI if you haven't already.
+2.  Link your local project to your remote Supabase project:
+    ```bash
+    supabase link --project-ref <project-id>
+    ```
+3.  Deploy all your Edge Functions to production:
+    ```bash
+    supabase functions deploy
+    ```
 
 ## Step 4: Deploy Frontend to Vercel
 
@@ -117,72 +88,36 @@ ASPNETCORE_URLS=http://+:5000
 5. Click **"Environment Variables"**
 6. Add the following:
    ```
-   Name: VITE_API_URL
-   Value: https://YOUR-RENDER-BACKEND.onrender.com/api
+   Name: VITE_SUPABASE_URL
+   Value: https://YOUR-PROJECT-ID.supabase.co
    ```
-   Replace `YOUR-RENDER-BACKEND` with your actual Render service name.
+   ```
+   Name: VITE_SUPABASE_ANON_KEY
+   Value: YOUR_SUPABASE_ANON_KEY
+   ```
+   Replace the values with the ones from your Supabase project's API settings.
 
 7. Click **"Deploy"**
 8. Wait for the deployment to complete
 9. Copy your deployment URL (e.g., `https://tapandtrack.vercel.app`)
 
-## Step 5: Update CORS Configuration
-
-1. Go back to your Render backend service
-2. Edit your `backend/Program.cs` to include your Vercel URL in CORS origins
-3. Or update via Render dashboard environment variables
-
-The CORS configuration in `Program.cs` includes:
-- `http://localhost:5173` (local development)
-- `https://tapandtrack.vercel.app` (production)
-
-Update the allowed origins as needed.
-
-## Step 6: Testing Deployment
-
-### Test Backend
-
-1. Visit `https://YOUR-BACKEND.onrender.com/swagger`
-2. Test the API endpoints
-3. Try registering a user via Swagger UI
-
-### Test Frontend
-
-1. Visit your Vercel deployment URL
-2. Register as a teacher
-3. Create a session
-4. Register as a student
-5. Scan the QR code to record attendance
+## Step 5: Testing Deployment
 
 ## Environment Variables Summary
 
-### Backend (Render)
-```env
-Supabase__Url=https://YOURPROJECT.supabase.co
-Supabase__Key=YOUR_SUPABASE_SERVICE_ROLE_KEY
-ASPNETCORE_URLS=http://+:10000
-```
-
 ### Frontend (Vercel)
 ```env
-VITE_API_URL=https://tapandtrack-backend.onrender.com/api
+VITE_SUPABASE_URL=https://YOUR-PROJECT-ID.supabase.co
+VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 ```
 
 ## Continuous Deployment
 
-Both Render and Vercel support automatic deployments:
-
-- **Render**: Automatically deploys on push to the connected branch
 - **Vercel**: Automatically deploys on push to the connected branch
 
 Simply push to your main branch to trigger a new deployment.
 
 ## Monitoring and Logs
-
-### Backend Logs (Render)
-1. Go to your Render dashboard
-2. Select your backend service
-3. Click on the **"Logs"** tab
 
 ### Frontend Logs (Vercel)
 1. Go to your Vercel dashboard
@@ -192,18 +127,6 @@ Simply push to your main branch to trigger a new deployment.
 
 ## Troubleshooting
 
-### Backend Issues
-
-**Build Failed:**
-- Check build logs in Render
-- Verify `.csproj` file dependencies
-- Ensure .NET 8 SDK is specified
-
-**API Not Responding:**
-- Check environment variables are set correctly
-- Verify Supabase connection
-- Check service logs
-
 ### Frontend Issues
 
 **Build Failed:**
@@ -212,9 +135,9 @@ Simply push to your main branch to trigger a new deployment.
 - Ensure Node.js version is compatible
 
 **API Connection Failed:**
-- Verify `VITE_API_URL` is correct
-- Check CORS configuration on backend
-- Ensure backend service is running
+- Verify `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are correct.
+- Check your Supabase Edge Function logs.
+- Ensure you have configured CORS in your `supabase/config.toml` file if you are calling functions from a different domain.
 
 ### Database Issues
 
@@ -225,30 +148,18 @@ Simply push to your main branch to trigger a new deployment.
 
 ## Cost Estimation
 
-### Free Tier:
-- **Render**: Free tier available (with limitations)
+### Free Tiers:
 - **Vercel**: Free tier available
 - **Supabase**: Free tier with 500MB database
 
 ### Production:
-- **Render**: Starting at $7/month
 - **Vercel**: Starting at $20/month (Pro plan)
 - **Supabase**: Starting at $25/month (Pro plan)
 
 ## Security Recommendations
 
 1. Enable Row Level Security (RLS) policies in Supabase
-2. Implement JWT authentication for production
-3. Add rate limiting to API endpoints
-4. Enable HTTPS for all endpoints
-5. Regularly update dependencies
-6. Monitor for security vulnerabilities
-
-## Support
-
-For issues or questions:
-1. Check application logs
-2. Review error messages
-3. Test API endpoints with Swagger
-4. Verify environment variables
-5. Check service status on Render/Vercel dashboards
+2. Use Supabase's built-in JWT authentication.
+3. Add rate limiting to your Edge Functions if needed.
+4. Regularly update frontend dependencies.
+5. Monitor for security vulnerabilities.

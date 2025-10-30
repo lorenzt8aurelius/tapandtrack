@@ -1,6 +1,6 @@
 # TapAndTrack - QR-Based Attendance Tracking System
 
-A complete full-stack application for tracking student attendance using QR codes. Built with .NET 8 (C#) backend, React frontend, and Supabase database.
+A complete full-stack application for tracking student attendance using QR codes. Built with a React frontend and a serverless Supabase backend (Edge Functions + Database).
 
 ## 🎯 Features
 
@@ -10,16 +10,13 @@ A complete full-stack application for tracking student attendance using QR codes
 - ✅ **User Authentication**: Secure login and registration system
 - ✅ **Role-based Access**: Separate views for teachers and students
 - ✅ **Mobile-First Design**: Responsive UI optimized for mobile devices
-- ✅ **Swagger Documentation**: Complete API documentation at `/swagger`
 
 ## 🏗️ Tech Stack
 
 ### Backend
-- **.NET 8** - Modern C# Web API
+- **Supabase Edge Functions** - Deno/TypeScript for serverless logic
 - **Supabase** - PostgreSQL database
-- **QRCoder** - QR code generation
-- **BCrypt** - Password hashing
-- **Swagger** - API documentation
+- **QR Code Generation** (within Edge Functions)
 
 ### Frontend
 - **React 18** - UI framework
@@ -27,12 +24,10 @@ A complete full-stack application for tracking student attendance using QR codes
 - **React Router** - Client-side routing
 - **HTML5 QR Code** - Mobile camera scanner
 - **TailwindCSS** - Styling
-- **Axios** - HTTP client
 
 ### Deployment
-- **Backend**: Railway (cloud hosting)
+- **Backend**: Supabase (database and functions)
 - **Frontend**: Vercel (static hosting)
-- **Database**: Supabase (PostgreSQL)
 
 ## 📦 Project Structure
 
@@ -40,10 +35,9 @@ A complete full-stack application for tracking student attendance using QR codes
 TapAndTrack/
 ├── backend/                 # .NET 8 Web API
 │   ├── Controllers/        # API endpoints
-│   ├── Models/             # Data models
-│   ├── Program.cs          # App configuration
-│   └── README.md           # Backend documentation
-│
+│   ├── Models/
+│   ├── Program.cs
+│   └── README.md
 ├── frontend/               # React application
 │   ├── src/
 │   │   ├── pages/          # React components
@@ -58,7 +52,7 @@ TapAndTrack/
 
 ### Prerequisites
 
-- **.NET 8 SDK** - [Download](https://dotnet.microsoft.com/download/dotnet/8.0)
+- **Supabase CLI** - [Installation Guide](https://supabase.com/docs/guides/cli)
 - **Node.js 18+** - [Download](https://nodejs.org/)
 - **Supabase Account** - [Sign up](https://supabase.com)
 

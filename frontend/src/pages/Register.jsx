@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { authAPI } from '../api';
 import Logo from '../components/Logo';
+import { supabase } from '../supabaseClient';
 
 function Register({ updateUser }) {
   const [formData, setFormData] = useState({
@@ -10,7 +10,7 @@ function Register({ updateUser }) {
     password: '',
     role: 'student',
     department: '',
-    yearLevel: ''
+    year_level: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -29,12 +29,52 @@ function Register({ updateUser }) {
     setLoading(true);
 
     try {
-      const response = await authAPI.register(formData);
+      // 1. Create auth user with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (authError) {
+        throw new Error(authError.message);
+      }
+
+      if (!authData.user) {
+        throw new Error('Registration failed. Please try again.');
+      }
+
+      // 2. Create user profile in the users table
+      const { error: profileError } = await supabase
+        .from('users')
+        .insert([
+          {
+            id: authData.user.id,
+            email: formData.email,
+            role: formData.role,
+            department: formData.department || null,
+            year_level: formData.year_level || null,
+          }
+        ]);
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        throw new Error('Failed to create user profile. Please contact support.');
+      }
+
       toast.success('Registration successful!');
-      updateUser(response.user);
+      
+      // Update user with combined data
+      // This is the key fix: ensure the full user object from auth is merged with the profile role.
+      updateUser({
+        ...authData.user,
+        role: formData.role,
+        department: formData.department || null,
+        year_level: formData.year_level || null
+      });
+      
       navigate('/dashboard');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
+      toast.error(error.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -69,10 +109,11 @@ function Register({ updateUser }) {
                 type={showPassword ? "text" : "password"}
                 name="password"
                 required
+                minLength={6}
                 value={formData.password}
                 onChange={handleChange}
                 className="appearance-none relative block w-full px-3 py-3 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
+                placeholder="Password (min 6 characters)"
               />
               <button
                 type="button"
@@ -116,8 +157,8 @@ function Register({ updateUser }) {
             <div>
               <input
                 type="text"
-                name="yearLevel"
-                value={formData.yearLevel}
+                name="year_level"
+                value={formData.year_level}
                 onChange={handleChange}
                 className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Year Level (optional)"
