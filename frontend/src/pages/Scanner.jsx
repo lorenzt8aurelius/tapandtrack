@@ -3,12 +3,18 @@ import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import { toast } from 'react-toastify';
 import { supabase } from '../supabaseClient';
 
-function Scanner({ userId, onClose }) {
+function Scanner({ userId, onClose = () => {} }) {
   const scannerRef = useRef(null);
 
   useEffect(() => {
     // This check ensures we only create the scanner once.
     if (scannerRef.current) {
+      return;
+    }
+
+    const qrReaderElement = document.getElementById('qr-reader');
+    if (!qrReaderElement) {
+      console.error('[Scanner] QR reader element not found');
       return;
     }
 
@@ -18,7 +24,10 @@ function Scanner({ userId, onClose }) {
         fps: 10,
         qrbox: { width: 250, height: 250 },
         rememberLastUsedCamera: true,
-        // By removing 'supportedScanTypes', both camera and file scanning are enabled by default.
+        supportedScanTypes: [
+          Html5QrcodeScanType.SCAN_TYPE_CAMERA,
+          Html5QrcodeScanType.SCAN_TYPE_FILE
+        ]
       },
       false // verbose
     );
@@ -27,45 +36,96 @@ function Scanner({ userId, onClose }) {
     async function onScanSuccess(decodedText, decodedResult) {
       console.log(`[Scanner] Scan successful, result: ${decodedText}`);
       
-      // Stop scanning to prevent multiple submissions
-      scanner.clear();
-
-      // --- FIX: More robust session check to prevent 'expiresAt' error ---
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session || !session.user) {
-        toast.error("Your session is invalid or has expired. Please log in again.");
-        return;
+      // Stop scanning temporarily to prevent multiple scans
+      if (scannerRef.current) {
+        scannerRef.current.clear();
       }
 
       try {
-        const session_code = decodedText;
+        const session_code = decodedText.trim();
 
-        const { data, error } = await supabase.functions.invoke('record-attendance', {
-          // The studentId is retrieved from the auth token in the function.
-          // The body must match the function's expectation.
-          body: { session_code },
-        });
+        // First, verify the session exists and is active
+        const { data: sessionData, error: sessionError } = await supabase
+          .from('sessions')
+          .select('id, subject, is_active, session_code')
+          .eq('session_code', session_code)
+          .single();
 
-        if (error) {
-          // --- FIX: Safely handle the error object ---
-          if (error.context && typeof error.context.json === 'function') {
-            const errorData = await error.context.json();
-            throw new Error(errorData.error || 'An error occurred while recording attendance.');
-          } else {
-            // Fallback for generic network errors (like CORS or function not found)
-            throw new Error(error.message || 'A network error occurred. Please check your connection or backend function logs.');
-          }
+        if (sessionError || !sessionData) {
+          throw new Error('Invalid session code. Please scan a valid QR code.');
         }
 
-        toast.success(data.message || 'Attendance recorded successfully!');
-        onClose(); // Close the scanner on success
+        if (!sessionData.is_active) {
+          throw new Error('This session has ended. Please contact your teacher.');
+        }
+
+        // Check if student has already recorded attendance for this session
+        const { data: existingAttendance, error: checkError } = await supabase
+          .from('attendance')
+          .select('id')
+          .eq('session_code', session_code)
+          .eq('student_id', userId)
+          .maybeSingle();
+
+        if (checkError) {
+          throw new Error('Error checking existing attendance.');
+        }
+
+        if (existingAttendance) {
+          throw new Error('You have already recorded attendance for this session.');
+        }
+
+        // Insert attendance record
+        const { data: attendanceData, error: attendanceError } = await supabase
+          .from('attendance')
+          .insert([
+            {
+              student_id: userId,
+              session_code: session_code,
+              time_in: new Date().toISOString()
+            }
+          ])
+          .select()
+          .single();
+
+        if (attendanceError) {
+          console.error("Attendance insertion error:", attendanceError);
+          throw new Error(attendanceError.message || 'Failed to record attendance.');
+        }
+
+        toast.success(`Attendance recorded successfully for ${sessionData.subject}!`);
+        onClose(true); // Close the scanner on success and trigger refresh
       } catch (err) {
         console.error("Error recording attendance:", err);
         toast.error(err.message || 'Failed to record attendance.');
-        // Optionally restart the scanner after a delay
+        // Restart the scanner after a delay
         setTimeout(() => {
-          if (document.getElementById('qr-reader')) {
-             scanner.render(onScanSuccess, onScanFailure);
+          const qrReaderElement = document.getElementById('qr-reader');
+          if (qrReaderElement && scannerRef.current) {
+            try {
+              scannerRef.current.render(onScanSuccess, onScanFailure);
+            } catch (renderError) {
+              console.error('[Scanner] Failed to restart scanner:', renderError);
+              // Try to recreate the scanner
+              scannerRef.current = null;
+              if (qrReaderElement) {
+                const newScanner = new Html5QrcodeScanner(
+                  'qr-reader',
+                  {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    rememberLastUsedCamera: true,
+                    supportedScanTypes: [
+                      Html5QrcodeScanType.SCAN_TYPE_CAMERA,
+                      Html5QrcodeScanType.SCAN_TYPE_FILE
+                    ]
+                  },
+                  false
+                );
+                newScanner.render(onScanSuccess, onScanFailure);
+                scannerRef.current = newScanner;
+              }
+            }
           }
         }, 2000);
       }
@@ -96,8 +156,8 @@ function Scanner({ userId, onClose }) {
     <div>
       <div id="qr-reader" style={{ width: '100%', maxWidth: '500px', margin: '0 auto' }}></div>
       <button 
-        onClick={onClose} 
-        className="mt-4 w-full py-2 px-4 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition"
+        onClick={() => onClose(false)} 
+        className="mt-4 w-full py-2 px-4 bg-gray-600 dark:bg-gray-700 text-white rounded-md hover:bg-gray-700 dark:hover:bg-gray-600 transition"
       >
         Close Scanner
       </button>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../supabaseClient';
 import { toast } from 'react-toastify';
 
@@ -61,9 +61,13 @@ const SettingsModal = ({ isOpen, onClose, user }) => {
   const [attendanceSummary, setAttendanceSummary] = useLocalStorage('settings_attendanceSummary', false);
   const [systemNotifications, setSystemNotifications] = useLocalStorage('settings_systemNotifications', true);
 
+  // New Notification Toggles
+  const [realtimeUpdates, setRealtimeUpdates] = useLocalStorage('settings_realtimeUpdates', true);
+  const [soundNotifications, setSoundNotifications] = useLocalStorage('settings_soundNotifications', false);
+
+
   // App Preferences State
   const [language, setLanguage] = useLocalStorage('settings_language', 'en');
-  const [timeout, setTimeout] = useLocalStorage('settings_timeout', 30);
 
   useEffect(() => {
     if (user) {
@@ -96,10 +100,26 @@ const SettingsModal = ({ isOpen, onClose, user }) => {
     }
   };
 
+  const handlePasswordReset = async () => {
+    if (!user?.email) {
+      toast.error("User email not found.");
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${window.location.origin}/update-password`, // You'll need to create this page
+    });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Password reset link sent to your email!');
+    }
+  };
+
   const tabs = [
     { id: 'account', label: 'Account' },
     { id: 'notifications', label: 'Notifications' },
     { id: 'preferences', label: 'Preferences' },
+    { id: 'about', label: 'About' },
   ];
 
   return (
@@ -145,27 +165,43 @@ const SettingsModal = ({ isOpen, onClose, user }) => {
 
               <main className="flex-1 p-6 overflow-y-auto">
                 {activeTab === 'account' && (
-                  <form onSubmit={handleAccountUpdate} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
-                      <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-1 block w-full input-style" />
+                  <div className="space-y-6">
+                    <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-900/50 dark:border-gray-700">
+                        <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-200 mb-2">Account Information</h3>
+                        <div className="text-sm space-y-1 text-gray-600 dark:text-gray-400">
+                            <p><span className="font-medium text-gray-800 dark:text-gray-300">Email:</span> {user?.email}</p>
+                            <p><span className="font-medium text-gray-800 dark:text-gray-300">Role:</span> <span className="capitalize">{user?.user_metadata?.role}</span></p>
+                        </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
-                      <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Leave blank to keep current password" className="mt-1 block w-full input-style" />
+
+                    <form onSubmit={handleAccountUpdate} className="space-y-4">
+                      <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-200">Update Profile</h3>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
+                        <input type="text" value={department} onChange={e => setDepartment(e.target.value)} className="mt-1 block w-full input-style" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Year Level</label>
+                        <input type="text" value={yearLevel} onChange={e => setYearLevel(e.target.value)} className="mt-1 block w-full input-style" />
+                      </div>
+                      <div className="pt-2">
+                        <button type="submit" className="w-full md:w-auto px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition">Save Changes</button>
+                      </div>
+                    </form>
+
+                    <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-900/50 dark:border-gray-700">
+                        <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-200 mb-2">Security</h3>
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Change your account password.</p>
+                            <button 
+                                onClick={handlePasswordReset}
+                                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                            >
+                                Change Password
+                            </button>
+                        </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
-                      <input type="text" value={department} onChange={e => setDepartment(e.target.value)} className="mt-1 block w-full input-style" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Year Level</label>
-                      <input type="text" value={yearLevel} onChange={e => setYearLevel(e.target.value)} className="mt-1 block w-full input-style" />
-                    </div>
-                    <div className="pt-2">
-                      <button type="submit" className="w-full md:w-auto px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition">Save Changes</button>
-                    </div>
-                  </form>
+                  </div>
                 )}
 
                 {activeTab === 'notifications' && (
@@ -173,6 +209,8 @@ const SettingsModal = ({ isOpen, onClose, user }) => {
                     <Toggle label="Session Alerts" enabled={sessionAlerts} setEnabled={setSessionAlerts} />
                     <Toggle label="Attendance Summary" enabled={attendanceSummary} setEnabled={setAttendanceSummary} />
                     <Toggle label="System Notifications" enabled={systemNotifications} setEnabled={setSystemNotifications} />
+                    <Toggle label="Real-time Updates" enabled={realtimeUpdates} setEnabled={setRealtimeUpdates} />
+                    <Toggle label="Sound Notifications" enabled={soundNotifications} setEnabled={setSoundNotifications} />
                   </div>
                 )}
 
@@ -185,11 +223,19 @@ const SettingsModal = ({ isOpen, onClose, user }) => {
                         <option value="es" disabled>Spanish (coming soon)</option>
                       </select>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Session Timeout Reminders (minutes)</label>
-                      <input type="number" value={timeout} onChange={e => setTimeout(e.target.value)} className="mt-1 block w-full input-style" />
-                      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Set a reminder for active sessions before they time out. (Placeholder)</p>
+                  </div>
+                )}
+
+                {activeTab === 'about' && (
+                  <div className="text-center p-6">
+                    <div className="flex justify-center items-center space-x-2">
+                      <InformationCircleIcon className="h-8 w-8 text-indigo-500"/>
+                      <h3 className="text-2xl font-bold text-gray-800 dark:text-white">TapAndTrack</h3>
                     </div>
+                    <p className="mt-2 text-gray-600 dark:text-gray-400">
+                      Version <span className="font-semibold text-indigo-600 dark:text-indigo-400">1.0.0</span>
+                    </p>
+                    <p className="mt-4 text-sm text-gray-500">A simple and efficient QR-based attendance system.</p>
                   </div>
                 )}
               </main>

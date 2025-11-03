@@ -1,24 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { supabase } from '../supabaseClient';
 import TeacherDashboard from '../components/TeacherDashboard';
 import StudentDashboard from '../components/StudentDashboard';
-import Navbar from '../components/Navbar'; // New component
-
-// A simple card for displaying stats
-const StatsCard = ({ title, value, icon, color }) => (
-  <div className={`bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md flex items-center space-x-4 border-l-4 ${color.border}`}>
-    <div className={`p-3 rounded-full ${color.bg} dark:bg-opacity-20`}>
-      {icon}
-    </div>
-    <div>
-      <p className="text-sm text-gray-500 dark:text-gray-400">{title}</p>
-      <p className="text-2xl font-bold text-gray-900 dark:text-white">{value ?? 'N/A'}</p>
-    </div>
-  </div>
-);
-
+import SettingsModal from '../components/SettingsModal';
+import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
 
 function Dashboard({ user, updateUser }) {
   const navigate = useNavigate();
@@ -26,13 +13,15 @@ function Dashboard({ user, updateUser }) {
   const [sessions, setSessions] = useState([]);
   const [activeSession, setActiveSession] = useState(null);
   const [attendance, setAttendance] = useState([]);
-  const [stats, setStats] = useState({ totalSessions: 0, totalAttendance: 0, averageAttendance: 0 });
   const [loading, setLoading] = useState(true);
   const [showScanner, setShowScanner] = useState(false); // For StudentDashboard
   const [isDarkMode, setDarkMode] = useState(() => {
     const savedMode = localStorage.getItem('darkMode');
     return savedMode ? JSON.parse(savedMode) : false;
-  });
+  }); 
+  const [isProfileOpen, setProfileOpen] = useState(false);
+  const [isSettingsOpen, setSettingsOpen] = useState(false);
+  const profileRef = useRef(null);
 
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
@@ -44,11 +33,48 @@ function Dashboard({ user, updateUser }) {
     }
   }, [isDarkMode]);
 
+  // Effect for clicking outside the profile dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const toggleDarkMode = () => {
     setDarkMode(prevMode => !prevMode);
   };
 
   const isTeacher = user && user.role === 'teacher';
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (isTeacher) {
+        const { data, error } = await supabase.functions.invoke('get-teacher-dashboard', {
+          body: { teacherId: user.id },
+        });
+        if (error) throw error;
+        setSessions(data.sessions || []);
+        setActiveSession(data.activeSession || null);
+      } else {
+        const { data: studentAttendance, error: studentError } = await supabase
+          .from('attendance')
+          .select('*', { count: 'exact' }) // Use count for efficiency
+          .eq('student_id', user.id);
+        if (studentError) throw studentError;
+        setAttendance(studentAttendance || []);
+      }
+    } catch (error) {
+      toast.error('Failed to fetch dashboard data.');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }, [isTeacher, user]);
 
   useEffect(() => {
     if (!user) {
@@ -56,55 +82,26 @@ function Dashboard({ user, updateUser }) {
       return;
     }
 
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        if (isTeacher) {
-          const { data, error } = await supabase.functions.invoke('get-teacher-dashboard', {
-            body: { teacherId: user.id },
-          });
-          if (error) throw error;
-          if(data.error) throw new Error(data.error);
+    loadData();
 
-          setSessions(data.sessions);
-          setActiveSession(data.activeSession);
+    // Real-time subscription setup
+    const channel = supabase.channel('dashboard-updates');
+    if (isTeacher) {
+      channel.on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `teacher_id=eq.${user.id}` }, loadData);
+    } else {
+      channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'attendance', filter: `student_id=eq.${user.id}` }, (payload) => {
+        loadData();
+        toast.info('Your attendance has been updated!');
+      });
+    }
+    channel.subscribe();
 
-          // Calculate stats for teacher
-          const totalAttendance = data.sessions.reduce((acc, s) => acc + (s.attendance_count || 0), 0);
-          const avgAttendance = data.sessions.length > 0 ? (totalAttendance / data.sessions.length) : 0;
-          setStats({
-            totalSessions: data.sessions.length,
-            totalAttendance: totalAttendance,
-            averageAttendance: avgAttendance.toFixed(1)
-          });
-
-        } else {
-          // Replaced failing 'get-student-dashboard' function call with a direct, secure query.
-          const { data: studentAttendance, error: studentError } = await supabase
-            .from('attendance')
-            .select('*')
-            .eq('student_id', user.id);
-          if (studentError) throw studentError;
-          setAttendance(studentAttendance || []);
-          setStats({
-            totalSessions: 'N/A',
-            totalAttendance: studentAttendance?.length || 0,
-            averageAttendance: 'N/A'
-          });
-        }
-      } catch (error) {
-        toast.error('Failed to fetch dashboard data.');
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
+    return () => {
+      supabase.removeChannel(channel);
     };
+  }, [user, navigate, isTeacher, loadData]);
 
-    fetchData();
-
-  }, [user, navigate, isTeacher]);
-
-  const handleCreateSession = async (e) => {
+  const handleCreateSession = async (e, durationMinutes) => {
     e.preventDefault();
     if (!subject) {
       toast.warn('Please enter a subject name.');
@@ -112,10 +109,9 @@ function Dashboard({ user, updateUser }) {
     } 
     try {
       const { data: newSession, error } = await supabase.functions.invoke('create-session', {
-        body: { teacherId: user.id, subject },
+        body: { teacherId: user.id, subject, durationMinutes: durationMinutes || null },
       });
       if (error) throw error;
-      if(newSession.error) throw new Error(newSession.error);
       setActiveSession(newSession);
       setSubject('');
       toast.success('Session created successfully!');
@@ -125,27 +121,51 @@ function Dashboard({ user, updateUser }) {
     }
   };
 
-  const handleEndSession = async (sessionCode) => {
+  const handleEndSession = useCallback(async (sessionCode) => {
     try {
       const { error } = await supabase.functions.invoke('end-session', {
         body: { sessionCode },
       });
       if (error) throw error;
       setActiveSession(null);
+      await loadData(); // Refresh data after ending a session
       toast.success('Session ended.');
     } catch (error) {
       toast.error('Failed to end session.');
       console.error(error);
     }
-  };
+  }, [loadData]);
 
   const handleLogout = () => {
     updateUser(null);
+    // Clear state to prevent flashing old data for next user
+    setSessions([]);
+    setAttendance([]);
+    setActiveSession(null);
     localStorage.removeItem('user');
     navigate('/login');
     toast.info('Logged out successfully.');
   };
-  
+
+  // Effect for auto-ending sessions
+  useEffect(() => {
+    if (isTeacher && activeSession && activeSession.duration_minutes && parseInt(activeSession.duration_minutes, 10) > 0) {
+      const sessionStartTime = new Date(activeSession.created_at).getTime();
+      const durationMs = parseInt(activeSession.duration_minutes, 10) * 60 * 1000;
+      const endTime = sessionStartTime + durationMs;
+
+      const interval = setInterval(() => {
+        if (Date.now() >= endTime) {
+          handleEndSession(activeSession.session_code);
+          toast.info(`Session for ${activeSession.subject} automatically ended after ${activeSession.duration_minutes} minutes.`);
+          clearInterval(interval);
+        }
+      }, 1000 * 30); // Check every 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [activeSession, isTeacher, handleEndSession]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
@@ -156,37 +176,61 @@ function Dashboard({ user, updateUser }) {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
-      <Navbar 
-        user={user} 
-        updateUser={updateUser}
-        handleLogout={handleLogout} 
-        isDarkMode={isDarkMode}
-        toggleDarkMode={toggleDarkMode}
-      />
+      <header className="bg-white dark:bg-gray-800 shadow-md">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+            Tap & Track
+          </h1>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={toggleDarkMode}
+              className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+              aria-label="Toggle dark mode"
+            >
+              {isDarkMode ? (
+                <SunIcon className="h-5 w-5" />
+              ) : (
+                <MoonIcon className="h-5 w-5" />
+              )}
+            </button>
+            {/* Profile Dropdown */}
+            <div className="relative" ref={profileRef}>
+              <button onClick={() => setProfileOpen(o => !o)} className="flex items-center space-x-2">
+                <span className="hidden sm:inline text-gray-700 dark:text-gray-300">{user?.email}</span>
+                <img className="h-8 w-8 rounded-full bg-gray-300" src={`https://api.dicebear.com/7.x/initials/svg?seed=${user?.email}`} alt="avatar" />
+              </button>
+
+              {isProfileOpen && (
+                <div className="absolute right-0 mt-2 w-56 origin-top-right bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                  <div className="py-1">
+                    <div className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 border-b dark:border-gray-600">
+                      <p className="font-semibold">Signed in as</p>
+                      <p className="truncate">{user?.email}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSettingsOpen(true);
+                        setProfileOpen(false);
+                      }}
+                      className="w-full text-left block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      Settings
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
       <main className="p-4 md:p-8">
           <div className="max-w-4xl mx-auto">
-            {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <StatsCard
-                title="Total Sessions"
-                value={sessions.length}
-                icon={<svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
-                color={{ border: "border-blue-500", bg: "bg-blue-100" }}
-              />
-              <StatsCard
-                title="Total Attendance"
-                value={stats.totalAttendance}
-                icon={<svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.653-.103-1.282-.29-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.653.103-1.282.29-1.857m0 0a5.002 5.002 0 019.42 0M17 16H7m10 4h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.653-.103-1.282-.29-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.653.103-1.282.29-1.857m0 0a5.002 5.002 0 019.42 0" /></svg>}
-                color={{ border: "border-green-500", bg: "bg-green-100" }}
-              />
-              <StatsCard
-                title="Avg. Attendance"
-                value={stats.averageAttendance}
-                icon={<svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c1.657 0 3 .895 3 2s-1.343 2-3 2-3-.895-3-2 1.343-2 3-2zM9 17a4 4 0 00-4 4v1h14v-1a4 4 0 00-4-4H9z" /></svg>}
-                color={{ border: "border-yellow-500", bg: "bg-yellow-100" }}
-              />
-            </div>
-
             {isTeacher ? (
               <TeacherDashboard
                 subject={subject}
@@ -196,6 +240,7 @@ function Dashboard({ user, updateUser }) {
                 handleCreateSession={handleCreateSession}
                 handleEndSession={handleEndSession}
                 user={user}
+                onSessionUpdate={loadData}
               />
             ) : (
               <StudentDashboard
@@ -203,10 +248,12 @@ function Dashboard({ user, updateUser }) {
                 attendance={attendance}
                 showScanner={showScanner}
                 setShowScanner={setShowScanner}
+                onAttendanceUpdate={loadData}
               />
             )}
           </div>
         </main>
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} user={user} />
     </div>
   );
 }
